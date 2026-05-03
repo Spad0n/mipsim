@@ -17,24 +17,20 @@ extern "C" {
             printf("%d", (int32_t)a0);
             break;
 
-        case 4: { // Print String (Version sécurisée et neutre en Endianness)
+        case 4: { // Print String
             uint32_t addr = a0;
             while (1) {
                 uint32_t* cell = get_memory_ptr(addr);
                 if (!cell) break;
 
-                // On accède à la cellule comme un tableau de 4 octets
-                // Cela évite de se soucier de l'endianness du processeur hôte
                 uint8_t* bytes = (uint8_t*)cell;
                 
-                // MIPS est traditionnellement Big Endian, donc l'octet 0 est à l'adresse haute
-                // Mais cela dépend de la façon dont votre 'load_program' remplit le tableau.
-                // Si vous avez copié des octets brut, addr % 4 vous donne l'index direct :
-                char c = (char)bytes[addr % 4];
+                // It compensate the inversion Little endian of the processor host
+                char c = (char)bytes[3 - addr % 4];
 
                 if (c == '\0') break;
                 putchar(c);
-                addr++;
+                addr += 1;
             }
             break;
         }
@@ -54,7 +50,7 @@ extern "C" {
             break;
 
         default:
-            // Debug : savoir quel syscall inconnu est appelé
+            // Debug : check which syscall is called
             printf("\n[Syscall] Unknown syscall code: %u (a0: %u)\n", v0, a0);
             break;
         }
@@ -73,59 +69,93 @@ Sint32 main() {
     TemporaryAllocator alloc{sys};
 
     StringView src = 
-        "lui $sp, 0x0040\n"
-        "ori $sp, $sp, 0x1000\n"
-        "addiu $v0, $zero, 4\n"
-        "lui $a0, 0x0040\n"
-        "ori $a0, $a0, 0x0200\n"
-        "syscall\n"
-        "ori $t0, $zero, 0xAA\n"
-        "ori $t1, $zero, 0x55\n"
-        "or $t2, $t0, $t1\n"
-        "and $t3, $t2, $t0\n"
-        "xor $t4, $t3, $t0\n"
-        "sltiu $a0, $t4, 1\n"
-        "addu $s0, $a0, $zero\n"
-        "addiu $v0, $zero, 4\n"
-        "lui $a0, 0x0040\n"
-        "ori $a0, $a0, 0x0240\n"
-        "syscall\n"
-        "addiu $v0, $zero, 1\n"
-        "addu $a0, $s0, $zero\n"
-        "syscall\n"
-        "addiu $a0, $zero, 5\n"
-        "jal factorial\n"
-        "lui $t8, 0x0040\n"
-        "sw $v0, 0x0280($t8)\n"
-        "addiu $v0, $zero, 4\n"
-        "lui $a0, 0x0040\n"
-        "ori $a0, $a0, 0x0220\n"
-        "syscall\n"
-        "lui $t8, 0x0040\n"
-        "lw $a0, 0x0280($t8)\n"
-        "addiu $v0, $zero, 1\n"
-        "syscall\n"
-        "addiu $v0, $zero, 17\n"
-        "addiu $a0, $zero, 69\n"
-        "syscall\n"
+        ".data\n"
+        "    msg_start:  .asciiz \"Calcul de 5! : \"\n"
+        "    msg_bit:    .asciiz \"Test Bitwise: \"\n"
+        "    msg_res:    .asciiz \"\\nResultat final: \"\n"
+        "    storage:    .word 0\n"
+        "\n"
+        ".text\n"
+        ".globl main\n"
+        "\n"
+        "main:\n"
+        "    li $sp, 0x00401000\n"
+        "\n"
+        "    la $a0, msg_start\n"
+        "    li $v0, 4\n"
+        "    syscall\n"
+        "    nop\n"
+        "\n"
+        "    li $t0, 0xAA\n"
+        "    li $t1, 0x55\n"
+        "    or $t2, $t0, $t1\n"
+        "    and $t3, $t2, $t0\n"
+        "    xor $t4, $t3, $t0\n"
+        "\n"
+        "    li $s0, 0\n"
+        "    bnez $t4, fail_bit\n"
+        "    nop\n"
+        "    li $s0, 1\n"
+        "\n"
+        "fail_bit:\n"
+        "    la $a0, msg_bit\n"
+        "    li $v0, 4\n"
+        "    syscall\n"
+        "    nop\n"
+        "\n"
+        "    move $a0, $s0\n"
+        "    li $v0, 1\n"
+        "    syscall\n"
+        "    nop\n"
+        "\n"
+        "    li $a0, 5\n"
+        "    jal factorial\n"
+        "    nop\n"
+        "\n"
+        "    la $t8, storage\n"
+        "    sw $v0, 0($t8)\n"
+        "\n"
+        "    la $a0, msg_res\n"
+        "    li $v0, 4\n"
+        "    syscall\n"
+        "    nop\n"
+        "\n"
+        "    lw $a0, 0($t8)\n"
+        "    li $v0, 1\n"
+        "    syscall\n"
+        "    nop\n"
+        "\n"
+        "    li $v0, 17\n"
+        "    li $a0, 69\n"
+        "    syscall\n"
+        "    nop\n"
+        "\n"
         "factorial:\n"
-        "addiu $sp, $sp, -8\n"
-        "sw $ra, 4($sp)\n"
-        "sw $a0, 0($sp)\n"
-        "slti $t0, $a0, 2\n"
-        "beq $t0, $zero, recurse\n"
-        "addiu $v0, $zero, 1\n"
-        "addiu $sp, $sp, 8\n"
-        "jr $ra\n"
-        "recurse:\n"
-        "addiu $a0, $a0, -1\n"
-        "jal factorial\n"
-        "lw $a0, 0($sp)\n"
-        "lw $ra, 4($sp)\n"
-        "addiu $sp, $sp, 8\n"
-        "mult $v0, $a0\n"
-        "mflo $v0\n"
-        "jr $ra";
+        "    addiu $sp, $sp, -8\n"
+        "    sw $ra, 4($sp)\n"
+        "    sw $a0, 0($sp)\n"
+        "\n"
+        "    li $t0, 1\n"
+        "    ble $a0, $t0, fact_base\n"
+        "    nop\n"
+        "\n"
+        "    addiu $a0, $a0, -1\n"
+        "    jal factorial\n"
+        "    nop\n"
+        "\n"
+        "    lw $a0, 0($sp)\n"
+        "    lw $ra, 4($sp)\n"
+        "    addiu $sp, $sp, 8\n"
+        "    mult $v0, $a0\n"
+        "    mflo $v0\n"
+        "    jr $ra\n"
+        "    nop\n"
+        "\n"
+        "fact_base:\n"
+        "    li $v0, 1\n"
+        "    addiu $sp, $sp, 8\n"
+        "    jr $ra\n"
+        "    nop\n";
 
     Lexer lex{src, alloc};
     auto tokens = lex.tokenize();

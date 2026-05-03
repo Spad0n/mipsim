@@ -1341,7 +1341,7 @@ void vmips32_step() {
     uint32_t *pc_ptr = get_memory_ptr(vm.PC);
     VMIPS32_ASSERT(pc_ptr != NULL, "PC execution out of bounds");
     uint32_t instruction = *pc_ptr;
-    printf("PC: 0x%08X | Instr: 0x%08X\n", vm.PC, instruction);
+    //printf("PC: 0x%08X | Instr: 0x%08X\n", vm.PC, instruction);
 
     uint32_t current_pc = vm.PC;
 
