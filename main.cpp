@@ -17,7 +17,7 @@ CTL_WASM_EXPORT void *wasm_alloc(unsigned long size) {
 }
 
 CTL_WASM_IMPORT(mips, exit)
-void _exit(int);
+void _exit(int code);
 
 extern "C" {
     void vmips32_syscall(uint32_t v0, uint32_t a0, uint32_t a1, uint32_t a2, uint32_t a3) {
@@ -65,7 +65,7 @@ extern "C" {
             break;
 
         default:
-            // Debug : check which syscall is called
+            // Debug : Check which syscall is called
             sb.format("\n[Syscall] Unknown syscall code: %u (a0: %u)\n", v0, a0);
             Console::print(*sb.result());
             break;

@@ -58,7 +58,7 @@
 
      #output {
          background: #000000;
-         color: #4af626; /* Vert style terminal */
+         color: #4af626; /* terminal style */
      }
 
      .controls {
@@ -95,7 +95,7 @@
     <p>Écrivez votre code assembleur et cliquez sur Run.</p>
 
     <div class="container">
-      <!-- Zone de saisie du code MIPS -->
+      <!-- Input Zone MIPS -->
       <div class="editor-pane">
         <label for="source-code">Code source MIPS :</label>
         <textarea id="source-code" spellcheck="false">
@@ -114,7 +114,7 @@ syscall</textarea>
         </div>
       </div>
 
-      <!-- Zone d'affichage du résultat (Console/Terminal) -->
+      <!-- Output Zone (Terminal) -->
       <div class="editor-pane">
         <label for="output">Sortie standard :</label>
         <textarea id="output" readonly></textarea>
@@ -131,22 +131,18 @@ syscall</textarea>
 
      async function loadWasm() {
          try {
-             // Construit une URL absolue propre pour éviter les problèmes de chemins relatifs
              const wasmUrl = new URL('mips.wasm', window.location.href);
              const response = await fetch(wasmUrl);
              
-             // Vérifier explicitement si le fichier existe (évite l'erreur générique)
              if (!response.ok) {
                  throw new Error(`Code HTTP ${response.status} (${response.statusText}) pour l'URL: ${wasmUrl}`);
              }
 
-             // Utilisation de arrayBuffer() + compile() au lieu de compileStreaming()
-             // Cela garantit que le Wasm se chargera même si GitHub Pages envoie un mauvais Type MIME
              const buffer = await response.arrayBuffer();
              compiledModule = await WebAssembly.compile(buffer);
              
              runBtn.textContent = "Run Code";
-             runBtn.disabled = false; // Activer le bouton
+             runBtn.disabled = false;
          } catch (err) {
              outputEl.value = "❌ ERROR: Impossible to load 'mips.wasm'.\n" + err.message;
          }
@@ -215,7 +211,6 @@ syscall</textarea>
          }
      });
 
-     // Démarrer le chargement
      loadWasm();
     </script>
   </body>
