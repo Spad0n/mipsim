@@ -1,0 +1,57 @@
+name: MIPS Wasm to Github Pages
+
+on:
+  push:
+    branches: ["master"]
+
+  workflow_dispatch:
+
+permissions:
+  content: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  # Job 1
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies (Clang, LLD, CMake)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang lld cmake
+
+      - name: Build MIPS WebAssembly
+        run: |
+          cmake -B build -DCMAKE_TOOLCHAIN_FILE=cmake/wasm32.cmake
+          cmake --build build
+
+      - name: Prepare Web files
+        run: |
+          mkdir dist
+          cp index.html dist/
+          cp build/mips.wasm dist/
+
+      - name: Upload artifact for GitHub Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './dist'
+
+  # Job 2
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

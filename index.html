@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MIPS Playground</title>
+    <style>
+     body {
+         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+         background: #1e1e1e;
+         color: #d4d4d4;
+         margin: 0;
+         padding: 20px;
+         display: flex;
+         flex-direction: column;
+         align-items: center;
+     }
+     h1 { color: #569cd6; margin-bottom: 5px; }
+     p { margin-bottom: 20px; color: #9cdcfe; }
+
+     .container {
+         display: flex;
+         gap: 20px;
+         width: 100%;
+         max-width: 1200px;
+     }
+
+     .editor-pane {
+         flex: 1;
+         display: flex;
+         flex-direction: column;
+     }
+
+     label {
+         font-weight: bold;
+         margin-bottom: 8px;
+         color: #9cdcfe;
+     }
+
+     textarea {
+         width: 100%;
+         height: 400px;
+         background: #2d2d2d;
+         color: #d4d4d4;
+         font-family: 'Courier New', Courier, monospace;
+         font-size: 16px;
+         padding: 10px;
+         border: 1px solid #444;
+         border-radius: 5px;
+         resize: vertical;
+         box-sizing: border-box;
+     }
+
+     textarea:focus {
+         outline: none;
+         border-color: #007acc;
+     }
+
+     #output {
+         background: #000000;
+         color: #4af626; /* Vert style terminal */
+     }
+
+     .controls {
+         margin-top: 15px;
+         text-align: center;
+     }
+
+     button {
+         background: #007acc;
+         color: white;
+         border: none;
+         padding: 10px 25px;
+         font-size: 16px;
+         font-weight: bold;
+         border-radius: 5px;
+         cursor: pointer;
+         transition: background 0.2s;
+     }
+
+     button:hover {
+         background: #005f9e;
+     }
+
+     button:disabled {
+         background: #555;
+         cursor: not-allowed;
+         color: #888;
+     }
+    </style>
+  </head>
+  <body>
+
+    <h1>MIPS WebAssembly VM</h1>
+    <p>Écrivez votre code assembleur et cliquez sur Run.</p>
+
+    <div class="container">
+      <!-- Zone de saisie du code MIPS -->
+      <div class="editor-pane">
+        <label for="source-code">Code source MIPS :</label>
+        <textarea id="source-code" spellcheck="false">
+li $a0, 42
+li $v0, 1
+syscall
+
+li $a0, 10
+li $v0, 11
+syscall
+
+li $v0, 10
+syscall</textarea>
+        <div class="controls">
+          <button id="run-btn" disabled>Chargement du compilateur...</button>
+        </div>
+      </div>
+
+      <!-- Zone d'affichage du résultat (Console/Terminal) -->
+      <div class="editor-pane">
+        <label for="output">Sortie standard :</label>
+        <textarea id="output" readonly></textarea>
+      </div>
+    </div>
+
+    <script>
+     let compiledModule = null;
+     const decoder = new TextDecoder('utf-8');
+
+     // Récupération des éléments HTML
+     const sourceCodeEl = document.getElementById('source-code');
+     const outputEl = document.getElementById('output');
+     const runBtn = document.getElementById('run-btn');
+
+     // 1. Charger et compiler WebAssembly au démarrage
+     async function loadWasm() {
+         try {
+             compiledModule = await WebAssembly.compileStreaming(fetch('mips.wasm'));
+             runBtn.textContent = "Run Code";
+             runBtn.disabled = false; // Activer le bouton
+         } catch (err) {
+             outputEl.value = "❌ Erreur critique: Impossible de charger 'mips.wasm'.\n" + err.message;
+         }
+     }
+
+     // 2. Fonction d'exécution liée au bouton
+     runBtn.addEventListener('click', async () => {
+         if (!compiledModule) return;
+
+         // Réinitialiser la zone de sortie
+         outputEl.value = "";
+         const sourceCode = sourceCodeEl.value;
+
+         let wasmMemory;
+
+         function u8(ptr, len) {
+             return new Uint8Array(wasmMemory.buffer, ptr, len);
+         }
+         
+         function readStr(ptr, len) {
+             return decoder.decode(u8(ptr, len));
+         }
+
+         // 3. Définir les imports
+         const imports = {
+             env: {
+                 console_log: (ptr, len) => {
+                     const str = readStr(ptr, len);
+                     // Ajouter le texte directement à la textarea de sortie
+                     outputEl.value += str;
+                     // Faire défiler automatiquement vers le bas (auto-scroll)
+                     outputEl.scrollTop = outputEl.scrollHeight;
+                 },
+                 // Stubs système
+                 fs_open: () => -1,
+                 fs_close: () => {},
+                 fs_read: () => 0,
+                 fs_write: () => 0,
+                 fs_size: () => 0n,
+                 fs_opendir: () => -1,
+                 fs_closedir: () => {},
+                 fs_readdir: () => 0
+                 //__cxa_atexit: () => 0 // Pour éviter l'erreur liée aux destructeurs globaux
+             },
+             mips: {
+                 exit: (code) => {
+                     throw new Error(`WASM Exit ${code}`);
+                 }
+             }
+         };
+
+         try {
+             // Instancier une VM vierge
+             const instance = await WebAssembly.instantiate(compiledModule, imports);
+             const wasmExports = instance.exports;
+             wasmMemory = wasmExports.memory;
+
+             // Encoder et allouer le code source dans Wasm
+             const encoder = new TextEncoder();
+             const bytes = encoder.encode(sourceCode);
+             const ptr = wasmExports.wasm_alloc(bytes.length + 1);
+             
+             const memoryView = new Uint8Array(wasmMemory.buffer);
+             memoryView.set(bytes, ptr);
+             memoryView[ptr + bytes.length] = 0; // terminateur de chaîne C
+
+             // Lancer l'exécution
+             wasmExports.run(ptr);
+
+         } catch (err) {
+             // Gérer la fin d'exécution ou les crashs
+             if (!err.message.startsWith('WASM Exit')) {
+                 outputEl.value += `\n[ERREUR VM] ${err.message}`;
+                 console.error(err);
+             }
+         }
+     });
+
+     // Démarrer le chargement
+     loadWasm();
+    </script>
+  </body>
+</html>
