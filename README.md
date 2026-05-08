@@ -7,6 +7,9 @@ $ cmake -B build
 $ cmake --build build
 ```
 
+or play directly on the browser (Wasm)
+https://spad0n.github.io/mipsim/
+
 ## References
 
 - https://github.com/MIPT-ILab/mipt-mips/wiki/MIPS-pseudo-instructions
