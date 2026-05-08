@@ -125,27 +125,36 @@ syscall</textarea>
      let compiledModule = null;
      const decoder = new TextDecoder('utf-8');
 
-     // Récupération des éléments HTML
      const sourceCodeEl = document.getElementById('source-code');
      const outputEl = document.getElementById('output');
      const runBtn = document.getElementById('run-btn');
 
-     // 1. Charger et compiler WebAssembly au démarrage
      async function loadWasm() {
          try {
-             compiledModule = await WebAssembly.compileStreaming(fetch('mips.wasm'));
+             // Construit une URL absolue propre pour éviter les problèmes de chemins relatifs
+             const wasmUrl = new URL('mips.wasm', window.location.href);
+             const response = await fetch(wasmUrl);
+             
+             // Vérifier explicitement si le fichier existe (évite l'erreur générique)
+             if (!response.ok) {
+                 throw new Error(`Code HTTP ${response.status} (${response.statusText}) pour l'URL: ${wasmUrl}`);
+             }
+
+             // Utilisation de arrayBuffer() + compile() au lieu de compileStreaming()
+             // Cela garantit que le Wasm se chargera même si GitHub Pages envoie un mauvais Type MIME
+             const buffer = await response.arrayBuffer();
+             compiledModule = await WebAssembly.compile(buffer);
+             
              runBtn.textContent = "Run Code";
              runBtn.disabled = false; // Activer le bouton
          } catch (err) {
-             outputEl.value = "❌ Erreur critique: Impossible de charger 'mips.wasm'.\n" + err.message;
+             outputEl.value = "❌ ERROR: Impossible to load 'mips.wasm'.\n" + err.message;
          }
      }
 
-     // 2. Fonction d'exécution liée au bouton
      runBtn.addEventListener('click', async () => {
          if (!compiledModule) return;
 
-         // Réinitialiser la zone de sortie
          outputEl.value = "";
          const sourceCode = sourceCodeEl.value;
 
@@ -159,17 +168,14 @@ syscall</textarea>
              return decoder.decode(u8(ptr, len));
          }
 
-         // 3. Définir les imports
          const imports = {
              env: {
                  console_log: (ptr, len) => {
                      const str = readStr(ptr, len);
-                     // Ajouter le texte directement à la textarea de sortie
                      outputEl.value += str;
-                     // Faire défiler automatiquement vers le bas (auto-scroll)
                      outputEl.scrollTop = outputEl.scrollHeight;
                  },
-                 // Stubs système
+                 // system Stubs 
                  fs_open: () => -1,
                  fs_close: () => {},
                  fs_read: () => 0,
@@ -178,7 +184,6 @@ syscall</textarea>
                  fs_opendir: () => -1,
                  fs_closedir: () => {},
                  fs_readdir: () => 0
-                 //__cxa_atexit: () => 0 // Pour éviter l'erreur liée aux destructeurs globaux
              },
              mips: {
                  exit: (code) => {
@@ -188,27 +193,23 @@ syscall</textarea>
          };
 
          try {
-             // Instancier une VM vierge
              const instance = await WebAssembly.instantiate(compiledModule, imports);
              const wasmExports = instance.exports;
              wasmMemory = wasmExports.memory;
 
-             // Encoder et allouer le code source dans Wasm
              const encoder = new TextEncoder();
              const bytes = encoder.encode(sourceCode);
              const ptr = wasmExports.wasm_alloc(bytes.length + 1);
              
              const memoryView = new Uint8Array(wasmMemory.buffer);
              memoryView.set(bytes, ptr);
-             memoryView[ptr + bytes.length] = 0; // terminateur de chaîne C
+             memoryView[ptr + bytes.length] = 0;
 
-             // Lancer l'exécution
              wasmExports.run(ptr);
 
          } catch (err) {
-             // Gérer la fin d'exécution ou les crashs
              if (!err.message.startsWith('WASM Exit')) {
-                 outputEl.value += `\n[ERREUR VM] ${err.message}`;
+                 outputEl.value += `\n[ERROR VM] ${err.message}`;
                  console.error(err);
              }
          }
