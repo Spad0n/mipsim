@@ -92,31 +92,34 @@
   <body>
 
     <h1>MIPS WebAssembly VM</h1>
-    <p>Écrivez votre code assembleur et cliquez sur Run.</p>
+    <p>Write your assembly code, then click "Run Code".</p>
 
     <div class="container">
       <!-- Input Zone MIPS -->
       <div class="editor-pane">
-        <label for="source-code">Code source MIPS :</label>
+        <label for="source-code">MIPS source code:</label>
         <textarea id="source-code" spellcheck="false">
+# print 42
 li $a0, 42
 li $v0, 1
 syscall
 
+# print '\n'
 li $a0, 10
 li $v0, 11
 syscall
 
+# exit
 li $v0, 10
 syscall</textarea>
         <div class="controls">
-          <button id="run-btn" disabled>Chargement du compilateur...</button>
+          <button id="run-btn" disabled>Loading the compiler...</button>
         </div>
       </div>
 
       <!-- Output Zone (Terminal) -->
       <div class="editor-pane">
-        <label for="output">Sortie standard :</label>
+        <label for="output">Output :</label>
         <textarea id="output" readonly></textarea>
       </div>
     </div>
@@ -144,7 +147,7 @@ syscall</textarea>
              runBtn.textContent = "Run Code";
              runBtn.disabled = false;
          } catch (err) {
-             outputEl.value = "❌ ERROR: Impossible to load 'mips.wasm'.\n" + err.message;
+             outputEl.value = "❌ ERROR: Failed to load 'mips.wasm'.\n" + err.message;
          }
      }
 
@@ -171,7 +174,7 @@ syscall</textarea>
                      outputEl.value += str;
                      outputEl.scrollTop = outputEl.scrollHeight;
                  },
-                 // system Stubs 
+                 // System Stubs 
                  fs_open: () => -1,
                  fs_close: () => {},
                  fs_read: () => 0,
@@ -205,7 +208,7 @@ syscall</textarea>
 
          } catch (err) {
              if (!err.message.startsWith('WASM Exit')) {
-                 outputEl.value += `\n[ERROR VM] ${err.message}`;
+                 outputEl.value += `\n[VM ERROR] ${err.message}`;
                  console.error(err);
              }
          }
