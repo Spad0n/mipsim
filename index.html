@@ -134,8 +134,7 @@ syscall</textarea>
 
      async function loadWasm() {
          try {
-             const wasmUrl = new URL('mips.wasm', window.location.href);
-             const response = await fetch(wasmUrl);
+             const response = await fetch('mips.wasm');
              
              if (!response.ok) {
                  throw new Error(`Code HTTP ${response.status} (${response.statusText}) pour l'URL: ${wasmUrl}`);

@@ -37,7 +37,7 @@ jobs:
         run: |
           mkdir dist
           cp index.html dist/
-          cp build/mips.wasm dist/
+          find build -name "*.wasm" -exec cp {} dist/mips.wasm \;
 
       - name: Upload artifact for GitHub Pages
         uses: actions/upload-pages-artifact@v3
