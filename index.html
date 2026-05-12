@@ -137,7 +137,7 @@ syscall</textarea>
              const response = await fetch('mips.wasm');
              
              if (!response.ok) {
-                 throw new Error(`Code HTTP ${response.status} (${response.statusText}) pour l'URL: ${wasmUrl}`);
+                 throw new Error(`Code HTTP ${response.status} (${response.statusText}) pour l'URL: mips.wasm`);
              }
 
              const buffer = await response.arrayBuffer();
