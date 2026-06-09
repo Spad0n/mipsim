@@ -2,6 +2,7 @@
 #define CTL_TYPES_HPP
 
 #include "info.hpp"
+#include <stdint.h> // uint8_t, uint16_t, uint32_t, uint64_t, int8_t, int16_t, int32_t, int64_t, uintptr_t
 
 struct Nat {};
 inline void *operator new(decltype(sizeof 0), void* ptr, Nat) {
@@ -10,14 +11,14 @@ inline void *operator new(decltype(sizeof 0), void* ptr, Nat) {
 
 namespace ctl {
 
-    using Uint8 = unsigned char;
-    using Sint8 = signed char;
-    using Uint16 = unsigned short;
-    using Sint16 = signed short;
-    using Uint32 = unsigned int;
-    using Sint32 = signed int;
-    using Uint64 = unsigned long long;
-    using Sint64 = signed long long;
+    using Uint8   = uint8_t;
+    using Sint8   = int8_t;
+    using Uint16  = uint16_t;
+    using Sint16  = int16_t;
+    using Uint32  = uint32_t;
+    using Sint32  = int32_t;
+    using Uint64  = uint64_t;
+    using Sint64  = int64_t;
     using Float64 = double;
     using Float32 = float;
 
@@ -25,15 +26,9 @@ namespace ctl {
     using Ulen = decltype(sizeof 0);
     using Bool = bool;
 
-#if defined(CTL_ARCH_32BIT)
-    /// @brief Raw memory address.
-    using Address = unsigned int; // == uintptr_t on wasm32 / x86
-#else
-    /// @brief Raw memory address.
-    using Address = unsigned long long;
-#endif
-    using Hash = Uint64;
-    using Unit = struct {};
+    using Address = uintptr_t;
+    using Hash    = Uint64;
+    using Unit    = struct {};
 
     static_assert(sizeof(Address) == sizeof(void*), "Address must match pointer size");
 
