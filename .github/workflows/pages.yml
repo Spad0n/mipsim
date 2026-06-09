@@ -30,7 +30,7 @@ jobs:
 
       - name: Build MIPS WebAssembly
         run: |
-          cmake -B build -DCMAKE_TOOLCHAIN_FILE=cmake/wasm32.cmake
+          cmake -B build -DCMAKE_TOOLCHAIN_FILE=cmake/wasm32.cmake -DCMAKE_BUILD_TYPE=Release
           cmake --build build
 
       - name: Prepare Web files
