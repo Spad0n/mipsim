@@ -100,16 +100,10 @@ namespace ctl {
         // No-op. See comments
     }
 
-    // ----------------------------------------------------------------------
-    // Console
-    // ----------------------------------------------------------------------
     void Console::print(StringView data) {
         host_console_log(data.data(), static_cast<unsigned>(data.length()));
     }
 
-    // ----------------------------------------------------------------------
-    // Filesystem
-    // ----------------------------------------------------------------------
     Filesystem::File* Filesystem::open_file(StringView name, Filesystem::Access access) {
         const int fd = host_fs_open(name.data(),
                                     static_cast<unsigned>(name.length()),
@@ -196,11 +190,6 @@ namespace ctl {
         return true;
     }
 
-    // ----------------------------------------------------------------------
-    // Linker : pas de chargement dynamique en wasm standalone.
-    // Renvoyer null partout est l'option correcte. Si tu veux du late-binding,
-    // expose un import JS qui fait du linking via WebAssembly.instantiate.
-    // ----------------------------------------------------------------------
     Linker::Library* Linker::load(StringView /*name*/) {
         return nullptr;
     }

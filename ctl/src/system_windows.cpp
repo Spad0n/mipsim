@@ -1,6 +1,7 @@
 #include "ctl/types.hpp"
 #include "ctl/info.hpp"
 #include "ctl/file.hpp"
+#include "ctl/unicode.hpp"
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -13,88 +14,70 @@
 namespace ctl {
 
     static Ulen convert_utf8_to_utf16(Slice<const Uint8> utf8, Slice<Uint16> utf16) {
-        Uint32 cp = 0;
         Ulen len = 0;
         auto out = utf16.data();
-        for (Ulen i = 0; i < utf8.length(); i++) {
-            auto element = &utf8[i];
-            auto ch = *element;
-            if (ch <= 0x7f) {
-                cp = ch;
-            } else if (ch <= 0xbf) {
-                cp = (cp << 6) | (ch & 0x3f);
-            } else if (ch <= 0xdf) {
-                cp = ch & 0x1f;
-            } else if (ch <= 0xef) {
-                cp = ch & 0x0f;
-            } else {
-                cp = ch & 0x07;
+        for (Ulen i = 0; i < utf8.length(); /**/) {
+            Rune rune{0};
+            const auto n = Rune::decode_utf8(utf8.slice(i), rune);
+            if (n == 0) {
+                i++; // Octet invalide : on le saute (option : émettre U+FFFD)
+                continue;
             }
-            element++;
-            if ((*element & 0xc0) != 0x80 && cp <= 0x10ffff) {
-                if (cp > 0xffff) {
-                    len += 2;
-                    if (out) {
-                        *out++ = static_cast<Uint16>(0xd800 | (cp >> 10));
-                        *out++ = static_cast<Uint16>(0xdc00 | (cp & 0x03ff));
-                    }
-                } else if (cp < 0xd800 || cp >= 0xe000) {
-                    len += 1;
-                    if (out) {
-                        *out++ = static_cast<Uint16>(cp);
-                    }
+            i += n;
+            const Uint32 cp = rune;
+            if (cp >= 0x10000) {
+                // Paire de surrogates UTF-16
+                if (out) {
+                    const Uint32 v = cp - 0x10000;
+                    *out++ = static_cast<Uint16>(0xD800 | (v >> 10));
+                    *out++ = static_cast<Uint16>(0xDC00 | (v & 0x3FF));
                 }
+                len += 2;
+            } else {
+                // decode_utf8 garantit déjà cp hors [0xD800, 0xDFFF]
+                if (out) {
+                    *out++ = static_cast<Uint16>(cp);
+                }
+                len += 1;
             }
         }
         return len;
     }
 
     static Ulen convert_utf16_to_utf8(Slice<const Uint16> utf16, Slice<Uint8> utf8) {
-	Uint32 cp = 0;
-	Ulen len = 0;
-	auto out = utf8.data();
-	for (Ulen i = 0; i < utf16.length(); i++) {
-            auto element = &utf16[i];
-            auto ch = *element;
-            if (ch >= 0xd800 && ch <= 0xdbff) {
-                cp = ((ch - 0xd800) << 10) | 0x10000;
-            } else {
-                if (ch >= 0xdc00 && ch <= 0xdfff) {
-                    cp |= ch - 0xdc00;
-                } else {
-                    cp = ch;
-                }
-                if (cp < 0x7f) {
-                    len += 1;
-                    if (out) {
-                        *out++ = static_cast<Uint8>(cp);
-                    }
-                } else if (cp < 0x7ff) {
-                    len += 2;
-                    if (out) {
-                        *out++ = static_cast<Uint8>(0xc0 | ((cp >> 6) & 0x1f));
-                        *out++ = static_cast<Uint8>(0x80 | (cp & 0x3f));
-                    }
-                } else if (cp < 0xffff) {
-                    len += 3;
-                    if (out) {
-                        *out++ = static_cast<Uint8>(0xe0 | ((cp >> 12) & 0x0f));
-                        *out++ = static_cast<Uint8>(0x80 | ((cp >> 6) & 0x3f));
-                        *out++ = static_cast<Uint8>(0x80 | (cp & 0x3f));
+        Ulen len = 0;
+        auto out = utf8.data();
+        for (Ulen i = 0; i < utf16.length(); i++) {
+            Uint32 cp = utf16[i];
+            if (cp >= 0xD800 && cp <= 0xDBFF) {
+                // High surrogate : doit être suivi d'un low surrogate
+                if (i + 1 < utf16.length()) {
+                    const Uint32 low = utf16[i + 1];
+                    if (low >= 0xDC00 && low <= 0xDFFF) {
+                        cp = 0x10000 + ((cp - 0xD800) << 10) + (low - 0xDC00);
+                        i++;
+                    } else {
+                        continue; // Surrogate non apparié : ignoré
                     }
                 } else {
-                    len += 4;
-                    if (out) {
-                        *out++ = static_cast<Uint8>(0xf0 | ((cp >> 18) & 0x07));
-                        *out++ = static_cast<Uint8>(0x80 | ((cp >> 12) & 0x3f));
-                        *out++ = static_cast<Uint8>(0x80 | ((cp >> 6) & 0x3f));
-                        *out++ = static_cast<Uint8>(0x80 | (cp & 0x3f));
-                    }
+                    continue;
                 }
-                cp = 0;
+            } else if (cp >= 0xDC00 && cp <= 0xDFFF) {
+                continue; // Low surrogate orphelin : ignoré
             }
-	}
-	return len;
+            Uint8 buf[4];
+            const auto n = Rune{cp}.encode_utf8(Slice<Uint8>{buf, 4});
+            if (n == 0) {
+                continue;
+            }
+            if (out) {
+                for (Ulen k = 0; k < n; k++) {
+                    *out++ = buf[k];
+                }
+            }
+            len += n;
+        }
+        return len;
     }
 
     // We need a mechanism to convert between UTF-8 and UTF-16 here, using only the

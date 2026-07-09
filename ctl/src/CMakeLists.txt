@@ -2,8 +2,6 @@ set(CTL_SOURCES
   allocator.cpp
   cpprt.cpp
   file.cpp
-  pool.cpp
-  slab.cpp
   stream.cpp
   string.cpp
   system.cpp
