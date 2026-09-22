@@ -26,24 +26,24 @@ void operator delete(void*, unsigned long) noexcept {
 
 extern "C" {
 
-    int __cxa_guard_acquire(Guard* guard) {
-	if (guard->done) {
-            return 0;
-	}
-	if (guard->pending) {
-            *(volatile int *)0 = 0;
-	}
-	guard->pending = 1;
-	return 1;
+int __cxa_guard_acquire(Guard* guard) {
+    if (guard->done) {
+        return 0;
     }
+    if (guard->pending) {
+        *(volatile int *)0 = 0;
+    }
+    guard->pending = 1;
+    return 1;
+}
 
-    void __cxa_guard_release(Guard* guard) {
-	guard->done = 1;
-    }
+void __cxa_guard_release(Guard* guard) {
+    guard->done = 1;
+}
 
-    void __cxa_pure_virtual() {
-	// No-op
-    }
+void __cxa_pure_virtual() {
+    // No-op
+}
 
 } // extern "C"
 

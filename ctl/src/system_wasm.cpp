@@ -5,40 +5,40 @@
 
 extern "C" {
 
-    CTL_WASM_IMPORT(env, console_log)
-    void host_console_log(const char* ptr, unsigned len);
+CTL_WASM_IMPORT(env, console_log)
+void host_console_log(const char* ptr, unsigned len);
 
-    CTL_WASM_IMPORT(env, fs_open)
-    int host_fs_open(const char* name_ptr, unsigned name_len, unsigned access);
+CTL_WASM_IMPORT(env, fs_open)
+int host_fs_open(const char* name_ptr, unsigned name_len, unsigned access);
 
-    CTL_WASM_IMPORT(env, fs_close)
-    void host_fs_close(int fd);
+CTL_WASM_IMPORT(env, fs_close)
+void host_fs_close(int fd);
 
-    CTL_WASM_IMPORT(env, fs_read)
-    unsigned host_fs_read(int fd,
-                          unsigned long long offset,
-                          unsigned char* buf,
-                          unsigned len);
+CTL_WASM_IMPORT(env, fs_read)
+unsigned host_fs_read(int fd,
+                      unsigned long long offset,
+                      unsigned char* buf,
+                      unsigned len);
 
-    CTL_WASM_IMPORT(env, fs_write)
-    unsigned host_fs_write(int fd,
-                           unsigned long long offset,
-                           const unsigned char* buf,
-                           unsigned len);
+CTL_WASM_IMPORT(env, fs_write)
+unsigned host_fs_write(int fd,
+                       unsigned long long offset,
+                       const unsigned char* buf,
+                       unsigned len);
 
-    CTL_WASM_IMPORT(env, fs_size)
-    unsigned long long host_fs_size(int fd);
+CTL_WASM_IMPORT(env, fs_size)
+unsigned long long host_fs_size(int fd);
 
-    CTL_WASM_IMPORT(env, fs_opendir)
-    int host_fs_opendir(const char* name_ptr, unsigned name_len);
+CTL_WASM_IMPORT(env, fs_opendir)
+int host_fs_opendir(const char* name_ptr, unsigned name_len);
 
-    CTL_WASM_IMPORT(env, fs_closedir)
-    void host_fs_closedir(int dir);
+CTL_WASM_IMPORT(env, fs_closedir)
+void host_fs_closedir(int dir);
 
-    CTL_WASM_IMPORT(env, fs_readdir)
-    unsigned host_fs_readdir(int dir,
-                             char* name_out, unsigned name_cap,
-                             unsigned* kind_out);
+CTL_WASM_IMPORT(env, fs_readdir)
+unsigned host_fs_readdir(int dir,
+                         char* name_out, unsigned name_cap,
+                         unsigned* kind_out);
 
 } // extern "C"
 
