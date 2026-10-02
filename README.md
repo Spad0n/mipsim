@@ -20,14 +20,14 @@ Designed with an emphasis on low-level systems engineering, the project implemen
 
 ## Tech Stack
 * **Language:** C++20 (utilizing a custom template library)
-* **Build System:** CMake
+* **Build System:** xmake
 * **Targets:** Native (Linux/macOS/Windows) & WebAssembly (Wasm)
 * **Toolchain:** Clang/LLVM
 
 ## Build & Usage
 
 ### Native Build
-Requires `cmake` and a C++ compiler (GCC/Clang).
+Requires [`xmake`](https://xmake.io) and a C++ compiler (GCC/Clang).
 
 ```console
 # Clone the repository
@@ -35,11 +35,19 @@ git clone https://github.com/Spad0n/mipsim.git
 cd mipsim
 
 # Configure and Build
-cmake -B build
-cmake --build build
+xmake
 
 # Running the simulator
-./mips <your_program.mips>
+./build/mips <your_program.mips>
+```
+
+### WebAssembly Build
+Requires `clang`, `lld` (`wasm-ld`) and `llvm-ar`.
+
+```console
+xmake f -p wasm -a wasm32 --toolchain=wasm32-clang -m release
+xmake
+# Output: build/mips.wasm, to be served next to index.html
 ```
 
 ### Web Version
