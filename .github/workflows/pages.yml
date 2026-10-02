@@ -31,11 +31,11 @@ jobs:
       - name: Setup xmake
         uses: xmake-io/github-action-setup-xmake@v1
         with:
-          xmake-version: latest
+          xmake-version: '3.0.6'
 
       - name: Build MIPS WebAssembly
         run: |
-          xmake f -p wasm -a wasm32 --toolchain=wasm32-clang -m release -y
+          xmake f -p wasm -a wasm32 --toolchain=wasm32-clang -m release -y -vD
           xmake -y
 
       - name: Prepare Web files
