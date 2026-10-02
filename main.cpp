@@ -156,9 +156,10 @@ extern "C" {
                 char c = (char)bytes[3 - addr % 4];
 
                 if (c == '\0') break;
-                Console::print(StringView(&c));
+                sb.put(c);
                 addr += 1;
             }
+            Console::print(*sb.result());
             break;
         }
 

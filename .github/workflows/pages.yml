@@ -23,15 +23,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install dependencies (Clang, LLD, LLVM)
+      - name: Install dependencies (Clang, LLD, LLVM, Xmake)
         run: |
           sudo apt-get update
           sudo apt-get install -y clang lld llvm xmake
-
-      #- name: Setup xmake
-      #  uses: xmake-io/github-action-setup-xmake@v1
-      #  with:
-      #    xmake-version: '3.0.6'
 
       - name: Build MIPS WebAssembly
         run: |
@@ -48,6 +43,24 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: './dist'
+
+  # Native build + tests (does not block the deployment)
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup xmake
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang lld llvm xmake
+
+      - name: Build and run tests
+        run: |
+          xmake f -m debug -y
+          xmake -y
+          xmake test -y
 
   # Job 2
   deploy:

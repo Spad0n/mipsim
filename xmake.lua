@@ -39,6 +39,24 @@ target("mips")
     )
     add_deps("ctl")
 
+    -- Tests: `xmake test`. Each tests/<name>.s with a tests/<name>.expected
+    -- is run and its output compared to the expected file.
+    on_load(function (target)
+        if target:is_plat("wasm") then
+            return
+        end
+        for _, expected in ipairs(os.files(path.join(target:scriptdir(), "tests", "*.expected"))) do
+            local name = path.basename(expected)
+            target:add("tests", name, {
+                runargs      = path.join(target:scriptdir(), "tests", name .. ".s"),
+                pass_outputs = io.readfile(expected):trim(),
+                trim_output  = true,
+                plain        = true,
+                run_timeout  = 2000,
+            })
+        end
+    end)
+
     if is_plat("wasm") then
         set_extension(".wasm")
         add_ldflags(

@@ -14,7 +14,7 @@ void vmips32_trap(const char *message);
 #endif // VMIPS32_ASSERT
 
 #ifndef MEM_SIZE
-#define MEM_SIZE 1024
+#define MEM_SIZE (64 * 1024)
 #endif // MEM_SIZE
 
 #ifndef VMIPS32_START
@@ -206,8 +206,9 @@ static void jalr(uint32_t instruction) {
     int rs = (instruction >> 21) & 0x1F;
     int rd = (instruction >> 11) & 0x1F;
 
-    vm.regs[rd] = vm.PC + 4;
-    vm.PC = vm.regs[rs];
+    uint32_t target = vm.regs[rs];
+    vm.regs[rd] = vm.PC;
+    vm.PC = target;
 }
 
 /*
@@ -352,8 +353,13 @@ static void _div(uint32_t instruction) {
     if (vm.regs[rt] != 0) {
         int32_t val1 = (int32_t)vm.regs[rs];
         int32_t val2 = (int32_t)vm.regs[rt];
-        vm.LO = val1 / val2;
-        vm.HI = val1 % val2;
+        if (val1 == (int32_t)0x80000000 && val2 == -1) {
+            vm.LO = 0x80000000;
+            vm.HI = 0;
+        } else {
+            vm.LO = val1 / val2;
+            vm.HI = val1 % val2;
+        }
     }
 }
 
@@ -637,7 +643,7 @@ static void j(uint32_t instruction) {
 static void jal(uint32_t instruction) {
     int address = instruction & 0x3FFFFFF;
 
-    vm.regs[RA] = vm.PC + 4;
+    vm.regs[RA] = vm.PC;
     vm.PC = (vm.PC & 0xf0000000) | (address << 2);
 }
 
@@ -653,7 +659,7 @@ static void beq(uint32_t instruction) {
     int16_t imm = instruction & 0xFFFF;
 
     if (vm.regs[rs] == vm.regs[rt]) {
-        vm.PC += 4 + (imm << 2);
+        vm.PC += (imm << 2);
     }
 }
 
@@ -669,7 +675,7 @@ static void bne(uint32_t instruction) {
     int16_t imm = instruction & 0xFFFF;
 
     if (vm.regs[rs] != vm.regs[rt]) {
-        vm.PC += 4 + (imm << 2);
+        vm.PC += (imm << 2);
     }
 }
 
@@ -684,7 +690,7 @@ static void blez(uint32_t instruction) {
     int16_t imm = instruction & 0xFFFF;
 
     if ((int32_t)vm.regs[rs] <= 0) {
-        vm.PC += 4 + (imm << 2);
+        vm.PC += (imm << 2);
     }
 }
 
@@ -699,7 +705,7 @@ static void bgtz(uint32_t instruction) {
     int16_t imm = instruction & 0xFFFF;
 
     if ((int32_t)vm.regs[rs] > 0) {
-        vm.PC += 4 + (imm << 2);
+        vm.PC += (imm << 2);
     }
 }
 
@@ -828,10 +834,7 @@ static void beql(uint32_t instruction) {
     int16_t imm = instruction & 0xFFFF;
 
     if (vm.regs[rs] == vm.regs[rt]) {
-        vm.PC += 4 + (imm << 2);
-    } else {
-        // cancel the delay slot by jumping onto it
-        vm.PC += 8;
+        vm.PC += (imm << 2);
     }
 }
 
@@ -847,10 +850,7 @@ static void bnel(uint32_t instruction) {
     int16_t imm = instruction & 0xFFFF;
 
     if (vm.regs[rs] != vm.regs[rt]) {
-        vm.PC += 4 + (imm << 2);
-    } else {
-        // cancel the delay slot by jumping onto it
-        vm.PC += 8;
+        vm.PC += (imm << 2);
     }
 }
 
@@ -865,10 +865,7 @@ static void blezl(uint32_t instruction) {
     int16_t imm = instruction & 0xFFFF;
 
     if ((int32_t)vm.regs[rs] <= 0) {
-        vm.PC += 4 + (imm << 2);
-    } else {
-        // cancel the delay slot by jumping onto it
-        vm.PC += 8;
+        vm.PC += (imm << 2);
     }
 }
 
@@ -883,10 +880,7 @@ static void bgtzl(uint32_t instruction) {
     int16_t imm = instruction & 0xFFFF;
 
     if ((int32_t)vm.regs[rs] > 0) {
-        vm.PC += 4 + (imm << 2);
-    } else {
-        // cancel the delay slot by jumping onto it
-        vm.PC += 8;
+        vm.PC += (imm << 2);
     }
 }
 
@@ -1153,7 +1147,7 @@ static void (*itables[64])(uint32_t) = {
 static void bltz(uint32_t instruction) {
     int rs = (instruction >> 21) & 0x1F;
     int16_t imm = instruction & 0xFFFF;
-    if ((int32_t)vm.regs[rs] < 0) vm.PC += 4 + (imm << 2);
+    if ((int32_t)vm.regs[rs] < 0) vm.PC += (imm << 2);
 }
 
 /*
@@ -1165,7 +1159,7 @@ static void bltz(uint32_t instruction) {
 static void bgez(uint32_t instruction) {
     int rs = (instruction >> 21) & 0x1F;
     int16_t imm = instruction & 0xFFFF;
-    if ((int32_t)vm.regs[rs] >= 0) vm.PC += 4 + (imm << 2);
+    if ((int32_t)vm.regs[rs] >= 0) vm.PC += (imm << 2);
 }
 
 /*
@@ -1178,9 +1172,7 @@ static void bltzl(uint32_t instruction) {
     int rs = (instruction >> 21) & 0x1F;
     int16_t imm = instruction & 0xFFFF;
     if ((int32_t)vm.regs[rs] < 0) {
-        vm.PC += 4 + (imm << 2);
-    } else {
-        vm.PC += 8;
+        vm.PC += (imm << 2);
     }
 }
 
@@ -1194,9 +1186,7 @@ static void bgezl(uint32_t instruction) {
     int rs = (instruction >> 21) & 0x1F;
     int16_t imm = instruction & 0xFFFF;
     if ((int32_t)vm.regs[rs] >= 0) {
-        vm.PC += 4 + (imm << 2);
-    } else {
-        vm.PC += 8;
+        vm.PC += (imm << 2);
     }
 }
 
@@ -1274,14 +1264,14 @@ static void tnei(uint32_t instruction) {
   REGIMM
   branch on less than zero and link
   Syntax: bltzal $s, offset
-  C code: if (s < 0) { ra = PC + 8; PC += offset; }
+  C code: if (s < 0) { ra = PC + 4; PC += offset; }
  */
 static void bltzal(uint32_t instruction) {
     int rs = (instruction >> 21) & 0x1F;
-    int imm = instruction & 0xFFFF;
+    int16_t imm = instruction & 0xFFFF;
     if ((int32_t)vm.regs[rs] < 0) {
-        vm.regs[RA] = vm.PC + 8;
-        vm.PC += 4 + (imm << 2);
+        vm.regs[RA] = vm.PC;
+        vm.PC += (imm << 2);
     }
 }
 
@@ -1289,14 +1279,14 @@ static void bltzal(uint32_t instruction) {
   REGIMM
   branch on greater than or equal to zero and link
   Syntax: bgezal $s, offset
-  C code: if (s >= 0) { ra = PC + 8; PC += offset; }
+  C code: if (s >= 0) { ra = PC + 4; PC += offset; }
  */
 static void bgezal(uint32_t instruction) {
     int rs = (instruction >> 21) & 0x1F;
-    int imm = instruction & 0xFFFF;
+    int16_t imm = instruction & 0xFFFF;
     if ((int32_t)vm.regs[rs] >= 0) {
-        vm.regs[RA] = vm.PC + 8;
-        vm.PC += 4 + (imm << 2);
+        vm.regs[RA] = vm.PC;
+        vm.PC += (imm << 2);
     }
 }
 
@@ -1304,16 +1294,14 @@ static void bgezal(uint32_t instruction) {
   REGIMM
   branch on less than zero and link likely
   Syntax: bltzall $s, offset
-  C code: if (s < 0) { ra = PC + 8; execute_delay_slot(); } else skip_delay_slot();
+  C code: if (s < 0) { ra = PC + 4; execute_delay_slot(); } else skip_delay_slot();
  */
 static void bltzall(uint32_t instruction) {
     int rs = (instruction >> 21) & 0x1F;
     int16_t imm = instruction & 0xFFFF;
     if ((int32_t)vm.regs[rs] < 0) {
-        vm.regs[RA] = vm.PC + 8;
-        vm.PC += 4 + (imm << 2);
-    } else {
-        vm.PC += 8;
+        vm.regs[RA] = vm.PC;
+        vm.PC += (imm << 2);
     }
 }
 
@@ -1335,6 +1323,9 @@ void vmips32_load_program(const uint32_t *program, size_t size_in_bytes) {
     vm.PC = VMIPS32_START;
 
     for (int i = 0; i < NUM_REGS; i++) vm.regs[i] = 0;
+    vm.regs[SP] = VMIPS32_START + MEM_SIZE * 4;
+    vm.HI = 0;
+    vm.LO = 0;
 }
 
 void vmips32_step() {
@@ -1343,7 +1334,7 @@ void vmips32_step() {
     uint32_t instruction = *pc_ptr;
     //printf("PC: 0x%08X | Instr: 0x%08X\n", vm.PC, instruction);
 
-    uint32_t current_pc = vm.PC;
+    vm.PC += 4;
 
     int opcode = (instruction >> 26) & 0x3F;
     if (opcode == 0x00) {
@@ -1360,10 +1351,6 @@ void vmips32_step() {
         if (ritables[regimm]) ritables[regimm](instruction);
     } else {
         if (itables[opcode]) itables[opcode](instruction);
-    }
-
-    if (vm.PC == current_pc) {
-        vm.PC += 4;
     }
 
     vm.regs[ZERO] = 0;
