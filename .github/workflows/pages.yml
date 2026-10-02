@@ -26,12 +26,12 @@ jobs:
       - name: Install dependencies (Clang, LLD, LLVM)
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang lld llvm
+          sudo apt-get install -y clang lld llvm xmake
 
-      - name: Setup xmake
-        uses: xmake-io/github-action-setup-xmake@v1
-        with:
-          xmake-version: '3.0.6'
+      #- name: Setup xmake
+      #  uses: xmake-io/github-action-setup-xmake@v1
+      #  with:
+      #    xmake-version: '3.0.6'
 
       - name: Build MIPS WebAssembly
         run: |
