@@ -1081,14 +1081,10 @@ static void swl(uint32_t instruction) {
     uint32_t addr = vm.regs[rs] + (int32_t)imm;
     uint32_t* cell = get_memory_ptr(addr);
     if (cell) {
-        int byte_offset = addr & 3;
+        int shift = (addr & 3) * 8;
         uint32_t reg_val = vm.regs[rt];
-        // Bitwise implementation approximation
-        //uint32_t shift = (byte_offset) * 8;
-        // This logic depends heavily on endianness interpretation
-        // Simplified:
-        uint32_t mask = 0xFFFFFFFF >> ((3 - byte_offset) * 8);
-        *cell = (*cell & mask) | (reg_val >> ((3-byte_offset) * 8));
+        uint32_t keep_mask = ~(0xFFFFFFFF >> shift);
+        *cell = (*cell & keep_mask) | (reg_val >> shift);
     }
 }
 
