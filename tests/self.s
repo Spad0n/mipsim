@@ -1,9 +1,12 @@
-# Test: a branch to itself must loop forever. Expected: timeout, 444 must NEVER be printed
-# Not run by `xmake test` (no .expected file): check it by hand.
+# Intent:   a branch to itself (offset -1) must loop forever.
+#           Not run by `xmake test` (no .expected file, a timeout is always a
+#           failure): run it by hand and stop it with Ctrl-C.
+# Expected: no output at all, 444 must NEVER be printed
 .text
-loop: b loop       # infinite loop
-  li $v0, 1        # print_int
-  li $a0, 444      # must never be printed
+loop:
+  b loop                 # infinite loop
+  li $v0, 1              # print_int
+  li $a0, 444            # must never be printed
   syscall
-  li $v0, 10       # exit
+  li $v0, 10             # exit
   syscall
