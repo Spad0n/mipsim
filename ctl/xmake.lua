@@ -39,9 +39,10 @@ target("ctl")
 
     if is_plat("wasm") then
         add_cxxflags(
-            "-nostdlibinc",  -- no system headers, but only use builtin clang
-            "-msimd128",     -- active <wasm_simd128.h> for allocator.cpp
-            "-mbulk-memory", -- active memory.fill / memory.copy
+            "-nostdlibinc",        -- no system headers, but only use builtin clang
+	    "-fno-builtin-strlen", -- prevent clang from optimizing loop into strlen()
+            "-msimd128",           -- active <wasm_simd128.h> for allocator.cpp
+            "-mbulk-memory",       -- active memory.fill / memory.copy
             {public = true}
         )
     end
