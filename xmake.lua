@@ -68,6 +68,7 @@ target("mips")
             "-Wl,--export=__data_end",
             "-Wl,-z,stack-size=8388608",
             "-Wl,--export=run",
+            "-Wl,--export=vmips32_step",
             "-Wl,--export=wasm_alloc",
             {force = true}
         )

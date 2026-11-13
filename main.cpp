@@ -78,7 +78,7 @@ extern "C" {
     }
 }
 
-CTL_WASM_EXPORT void run(const char* input) {
+CTL_WASM_EXPORT bool run(const char* input) {
     SystemAllocator sys;
     TemporaryAllocator arena{sys};
     arena.reset();
@@ -92,7 +92,7 @@ CTL_WASM_EXPORT void run(const char* input) {
         Location loc = lex.error_location();
         sb.format("%d:%d: %.*s", loc.line, loc.column, static_cast<int>(msg.length()), msg.data());
         Console::print(*sb.result());
-        return;
+        return false;
     }
 
     Parser parser{tokens->slice(), arena};
@@ -105,7 +105,7 @@ CTL_WASM_EXPORT void run(const char* input) {
             sb.format("%d:%d: %.*s\n", loc.line, loc.column, static_cast<int>(msg.length()), msg.data());
             Console::print(*sb.result());
         }
-        return;
+        return false;
     }
 
     Assembler asm_{arena};
@@ -118,16 +118,13 @@ CTL_WASM_EXPORT void run(const char* input) {
             sb.format("%d:%d: %.*s\n", loc.line, loc.column, static_cast<int>(msg.length()), msg.data());
             Console::print(*sb.result());
         }
-        return;
+        return false;
     }
 
     auto bc = asm_.bytecode();
 
     vmips32_load_program(bc.data(), bc.length() * 4);
-
-    for (;;) {
-        vmips32_step();
-    }
+    return true;
 }
 #else
 

@@ -126,6 +126,7 @@ syscall</textarea>
 
     <script>
      let compiledModule = null;
+     let rafId = null;
      const decoder = new TextDecoder('utf-8');
 
      const sourceCodeEl = document.getElementById('source-code');
@@ -152,6 +153,11 @@ syscall</textarea>
 
      runBtn.addEventListener('click', async () => {
          if (!compiledModule) return;
+
+         if (rafId !== null) {
+             cancelAnimationFrame(rafId);
+             rafId = null;
+         }
 
          outputEl.value = "";
          const sourceCode = sourceCodeEl.value;
@@ -203,7 +209,24 @@ syscall</textarea>
              memoryView.set(bytes, ptr);
              memoryView[ptr + bytes.length] = 0;
 
-             wasmExports.run(ptr);
+             if (!wasmExports.run(ptr)) {
+                 return;
+             }
+
+             function tick() {
+                 try {
+                     wasmExports.vmips32_step();
+                     rafId = requestAnimationFrame(tick);
+                 } catch (err) {
+                     rafId = null;
+                     if (!err.message.startsWith('WASM Exit')) {
+                         outputEl.value += `\n[VM ERROR] ${err.message}`;
+                         console.error(err);
+                     }
+                 }
+             }
+
+             rafId = requestAnimationFrame(tick);
 
          } catch (err) {
              if (!err.message.startsWith('WASM Exit')) {

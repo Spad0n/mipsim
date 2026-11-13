@@ -85,7 +85,6 @@ msg: .asciiz "Hello, MIPS!\n"
 * **`add`, `addi` and `sub` do not trap on overflow**, and **`break` is ignored**.
 * **Not implemented:** `mul` and the other SPECIAL2 instructions (`madd`, `msub`, `clo`, `clz`...), `tgeiu`, `bgezall`, `ll`/`sc`, coprocessor 0, the floating-point unit (coprocessor 1), and the MIPS32 Release 2 additions.
 * **No input syscalls** (read integer, read string...) and no heap allocation (`sbrk`).
-* **Web version:** a program that never exits freezes the browser tab.
 
 ## Tech Stack
 * **Language:** C++20 (utilizing a custom template library)
